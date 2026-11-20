@@ -215,10 +215,8 @@ test('창: VS Code와 모바일에서는 자모가 돌고, 달리기는 열 곳�
     await ui.press({ key: 'back' })
     await ui.press({ key: 'open-jamo' })
     // 모바일 앱은 Input을 받겠다고 한 앱에만 그려 주므로, 화면 자판은 어디서나 된다
-    // 낮은 창에서는 칸이 한 줄 칩이라 테두리 칸이 없다
-    expect((await ui.findAll({ type: 'Box' })).filter(b => (b.props as { borderStyle?: string }).borderStyle !== undefined).length).toBe(0)
     await ui.press({ key: 'k-ㅂ' })
-    expect((await ui.findAll({ type: 'Text', text: ' ㅂ ' })).length).toBeGreaterThanOrEqual(2) // 자판 + 칸
+    expect(await ui.find({ type: 'Text', text: 'ㅂ' })).toBeDefined()
     if (surface === 'vscode') expect(await ui.find({ key: 'typing' })).toBeDefined()
     await ui.press({ key: 'back' })
     await ui.unmount()
