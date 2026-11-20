@@ -189,7 +189,10 @@ type Cell = { ch: string; fill?: string; border: string; bold?: boolean }
 
 export type Els = Pick<Elements['terminal'], 'Box' | 'Text' | 'Button' | 'Input'>
 
-export async function JamoView($: Dollar, els: Els, run: (p: Promise<unknown>) => void, cols = 70) {
+/**
+ * compact: 창이 낮을 때(VS Code 아래 칸 등) 칸을 테두리 없는 한 줄 칩으로 그려 한눈에 들어오게 한다.
+ */
+export async function JamoView($: Dollar, els: Els, run: (p: Promise<unknown>) => void, cols = 70, compact = false) {
   paneCols = cols
   const { Box, Text, Button, Input } = els
   // 버튼을 누른 뒤에는 포커스를 타자 칸으로 돌린다
@@ -246,6 +249,22 @@ export async function JamoView($: Dollar, els: Els, run: (p: Promise<unknown>) =
         <Text dimColor>{g.mode === 'daily' ? `오늘의 낱말 · 연속 ${records.jamoStreak}일` : '연습'}</Text>
       </Box>
 
+      {compact ? (
+        <Box flexDirection="column" marginTop={1} alignItems="center">
+          {grid.map(cells => (
+            <Box flexDirection="row" gap={1}>
+              {cells.map(c => (
+                <Text
+                  backgroundColor={c.fill ?? (c.bold && c.ch === ' ' ? '#5f574f' : '#1d2b53')}
+                  color={c.border === '#83769c' ? '#83769c' : '#ffffff'}
+                  weight="bold"
+                >{` ${c.ch === ' ' ? '  ' : c.ch} `}</Text>
+              ))}
+            </Box>
+          ))}
+          {g.words.length > 0 && <Text dimColor>{g.words.join(' · ')}</Text>}
+        </Box>
+      ) : (
       <Box flexDirection="column" marginTop={1} alignItems="center">
         {grid.map(cells => (
           <Box flexDirection="row" gap={1}>
@@ -258,9 +277,10 @@ export async function JamoView($: Dollar, els: Els, run: (p: Promise<unknown>) =
         ))}
         {g.words.length > 0 && <Text dimColor>{g.words.join(' · ')}</Text>}
       </Box>
+      )}
 
       {!g.isDone && (
-        <Box flexDirection="column" marginTop={1} gap={1} alignItems="center">
+        <Box flexDirection="column" marginTop={1} gap={compact ? 0 : 1} alignItems="center">
           {KEYBOARD.slice(0, 2).map(line => (
             <Box flexDirection="row" gap={1}>{[...line].map(key)}</Box>
           ))}
@@ -285,11 +305,15 @@ export async function JamoView($: Dollar, els: Els, run: (p: Promise<unknown>) =
             onSubmit={v => run(guess($, normalizeTyped(v)))}
           />
           {msg !== '' && <Text color="#ffec27">{msg}</Text>}
-          <Box flexDirection="column" alignItems="center">
-            <Text dimColor>한/영을 끄고 두벌식 자리로 치면(a → ㅁ, k → ㅏ) 키마다 바로 칸에 찍혀요.</Text>
-            <Text dimColor>Enter: 입력 · Backspace: 지우기 · Esc: 채팅으로 · 화면 자판을 눌러도 돼요.</Text>
-            <Text dimColor>🟩 자리까지 맞음 · 🟧 있지만 자리 다름 · ⬛ 없음</Text>
-          </Box>
+          {compact ? (
+            <Text dimColor>한/영 끄고 치기(a → ㅁ) · Enter 입력 · Esc 채팅으로 · 🟩 맞음 🟧 자리 다름</Text>
+          ) : (
+            <Box flexDirection="column" alignItems="center">
+              <Text dimColor>한/영을 끄고 두벌식 자리로 치면(a → ㅁ, k → ㅏ) 키마다 바로 칸에 찍혀요.</Text>
+              <Text dimColor>Enter: 입력 · Backspace: 지우기 · Esc: 채팅으로 · 화면 자판을 눌러도 돼요.</Text>
+              <Text dimColor>🟩 자리까지 맞음 · 🟧 있지만 자리 다름 · ⬛ 없음</Text>
+            </Box>
+          )}
         </Box>
       )}
 

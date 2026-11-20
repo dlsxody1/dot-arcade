@@ -261,6 +261,8 @@ export const register: Register = on => {
     const sessions = await read($, sessionsA)
     const launched = await read($, launchA)
     const cols = Math.max(40, (e.props.bodyColumns ?? 72) - 2)
+    // 창이 낮으면(VS Code 아래 칸, 모바일) 자모 칸을 한 줄짜리로 줄여 스크롤 없이 보이게 한다
+    const compact = e.surface === 'vscode' || e.surface === 'mobile' || (e.props.scroll?.bodyRows ?? 60) < 40
 
     const header = (
       <Box flexDirection="column" marginBottom={1}>
@@ -277,7 +279,7 @@ export const register: Register = on => {
       return (
         <Box flexDirection="column">
           {header}
-          {await JamoView($, els, run, cols)}
+          {await JamoView($, els, run, cols, compact)}
         </Box>
       )
     }
