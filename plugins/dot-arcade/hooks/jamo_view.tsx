@@ -252,14 +252,18 @@ export async function JamoView($: Dollar, els: Els, run: (p: Promise<unknown>) =
     const m = seen.get(ch)
     return m === undefined ? '#83769c' : MARK_BG[m]
   }
-  // 그림판을 쓰는 곳은 버튼 바탕색을 못 칠하니 글자색(테마 색)으로 판정을 보인다
-  const MARK_THEME: Record<Mark, 'success' | 'warning' | 'inactive'> = { hit: 'success', near: 'warning', miss: 'inactive' }
+  // 앱(데스크톱, VS Code, 모바일) 자판: 흰 바탕에 회색 테두리 키. 판정은 글자색으로.
+  // 테마와 상관없이 흰 바탕이므로 글자색도 직접 정한다.
+  const RICH_INK: Record<Mark, string> = { hit: '#008751', near: '#d97a00', miss: '#b0b0b8' }
   const keyRich = (ch: string) => {
     const m = seen.get(ch)
+    const on = typing.has(ch)
     return (
-      <Button key={`k-${ch}`} plain onPress={() => press(typeJamo($, ch))}>
-        <Text color={typing.has(ch) ? 'claude' : m === undefined ? undefined : MARK_THEME[m]} weight="bold" underline={typing.has(ch) || undefined}>{` ${ch} `}</Text>
-      </Button>
+      <Box borderStyle="round" borderColor={on ? '#1d2b53' : '#c2c3c7'} backgroundColor="#ffffff" paddingX={1}>
+        <Button key={`k-${ch}`} plain onPress={() => press(typeJamo($, ch))}>
+          <Text color={m === undefined ? '#1d2b53' : RICH_INK[m]} weight="bold" underline={on || undefined}>{ch}</Text>
+        </Button>
+      </Box>
     )
   }
   // 지금 치고 있는 자모는 흰 바탕으로 바로 표시
@@ -300,19 +304,35 @@ export async function JamoView($: Dollar, els: Els, run: (p: Promise<unknown>) =
 
       {!g.isDone && (
         <Box flexDirection="column" marginTop={1} gap={1} alignItems="center">
-          {KEYBOARD.slice(0, 2).map(line => (
-            <Box flexDirection="row" gap={1}>{[...line].map(key)}</Box>
-          ))}
-          <Box flexDirection="row" gap={1}>
-            <Button key="enter" variant="primary" label="입력" onPress={() => press(guess($, draft.text))} />
-            {[...(KEYBOARD[2] ?? '')].map(key)}
-            <Button key="erase" label="삭제" onPress={() => press(erase($))} />
-          </Box>
-          <Box flexDirection="row" gap={1}>
-            {[...(KEYBOARD[3] ?? '')].map(key)}
-            <Button key="hint" label={`힌트 (보너스 ${bonus})`} onPress={() => press(hint($))} />
-            {g.mode === 'practice' && <Button key="new" label="새 낱말" onPress={() => press(practice($))} />}
-          </Box>
+          {Svg !== undefined ? (
+            // 좁은 앱 창: 자판 세 줄 다음에 버튼 줄을 따로 둬 잘리지 않게 한다
+            <Box flexDirection="column" alignItems="center">
+              {KEYBOARD.map(line => (
+                <Box flexDirection="row" gap={1}>{[...line].map(key)}</Box>
+              ))}
+              <Box flexDirection="row" gap={1} flexWrap="wrap" justifyContent="center">
+                <Button key="enter" variant="primary" label="입력" onPress={() => press(guess($, draft.text))} />
+                <Button key="erase" label="삭제" onPress={() => press(erase($))} />
+                <Button key="hint" label={`힌트 (보너스 ${bonus})`} onPress={() => press(hint($))} />
+                {g.mode === 'practice' && <Button key="new" label="새 낱말" onPress={() => press(practice($))} />}
+              </Box>
+            </Box>
+          ) : (
+            <Box flexDirection="column" gap={1} alignItems="center">
+              {KEYBOARD.slice(0, 2).map(line => (
+                <Box flexDirection="row" gap={1}>{[...line].map(key)}</Box>
+              ))}
+              <Box flexDirection="row" gap={1}>
+                <Button key="enter" variant="primary" label="입력" onPress={() => press(guess($, draft.text))} />
+                {[...(KEYBOARD[2] ?? '')].map(key)}
+                <Button key="erase" label="삭제" onPress={() => press(erase($))} />
+              </Box>
+              <Box flexDirection="row" gap={1}>
+                <Button key="hint" label={`힌트 (보너스 ${bonus})`} onPress={() => press(hint($))} />
+                {g.mode === 'practice' && <Button key="new" label="새 낱말" onPress={() => press(practice($))} />}
+              </Box>
+            </Box>
+          )}
           <Input
             key="typing"
             autoFocus
