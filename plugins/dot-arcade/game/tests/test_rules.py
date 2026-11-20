@@ -7,7 +7,7 @@ HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, HERE)
 os.environ['DOT_ARCADE_DATA'] = tempfile.mkdtemp()
 
-from games.jamo_rules import WORDS, compose, daily_answer, decompose, judge, key_to_jamo  # noqa: E402
+from games.jamo_rules import WORDS, compose, daily_answer, decompose, judge, key_to_jamo, split_jamo  # noqa: E402
 from games.runner_level import MAX_GAP, T, build  # noqa: E402
 from games.runner_player import PH, Player  # noqa: E402
 from games import shooter_wave as wv  # noqa: E402
@@ -17,7 +17,7 @@ import core  # noqa: E402
 def test_decompose_splits_compound_vowels_and_finals():
     assert decompose('사과') == ['ㅅ', 'ㅏ', 'ㄱ', 'ㅗ', 'ㅏ']
     assert decompose('닭') == ['ㄷ', 'ㅏ', 'ㄹ', 'ㄱ']
-    assert decompose('까치') == ['ㄲ', 'ㅏ', 'ㅊ', 'ㅣ']
+    assert decompose('까치') == ['ㄱ', 'ㄱ', 'ㅏ', 'ㅊ', 'ㅣ']  # 된소리도 기본 자모 둘
 
 
 def test_compose_accepts_only_two_syllables():
@@ -97,3 +97,12 @@ def test_records_and_bonus_files():
     core.change_bonus(2, ['a:1'])
     assert core.use_bonus() and core.load_bonus()['bonus'] == 1
     assert core.set_streak(100, True) == 1 and core.set_streak(101, True) == 2 and core.set_streak(103, False) == 0
+
+
+def test_double_jamo_split_into_basic_ones():
+    assert decompose('까치') == list('ㄱㄱㅏㅊㅣ')
+    assert decompose('새') == list('ㅅㅏㅣ') and decompose('게') == list('ㄱㅓㅣ')
+    assert decompose('꽤') == list('ㄱㄱㅗㅏㅣ')
+    assert split_jamo('ㅖ') == ['ㅕ', 'ㅣ'] and split_jamo('ㄱ') == ['ㄱ']
+    assert compose(list('ㄱㄱㅏㅊㅣ')) == '까치'
+    assert daily_answer(20776) == '이름' and daily_answer(20777) == '음표'  # mod판과 같다

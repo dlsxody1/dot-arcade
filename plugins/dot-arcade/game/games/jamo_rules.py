@@ -1,21 +1,35 @@
 """자모 다섯 칸 규칙: 자모 분해, 두 글자로 묶이는지, 색 판정, 오늘의 낱말, 두벌식 자판."""
 from __future__ import annotations
 
-CHO = 'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ'
-JUNG = ['ㅏ', 'ㅐ', 'ㅑ', 'ㅒ', 'ㅓ', 'ㅔ', 'ㅕ', 'ㅖ', 'ㅗ', 'ㅗㅏ', 'ㅗㅐ', 'ㅗㅣ', 'ㅛ', 'ㅜ', 'ㅜㅓ', 'ㅜㅔ', 'ㅜㅣ',
-        'ㅠ', 'ㅡ', 'ㅡㅣ', 'ㅣ']
-JONG = ['', 'ㄱ', 'ㄲ', 'ㄱㅅ', 'ㄴ', 'ㄴㅈ', 'ㄴㅎ', 'ㄷ', 'ㄹ', 'ㄹㄱ', 'ㄹㅁ', 'ㄹㅂ', 'ㄹㅅ', 'ㄹㅌ', 'ㄹㅍ', 'ㄹㅎ',
-        'ㅁ', 'ㅂ', 'ㅂㅅ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ']
+# 모든 글자를 기본 자모 24개(자음 14, 모음 10)로 푼다: ㄲ → ㄱㄱ, ㅐ → ㅏㅣ, ㅙ → ㅗㅏㅣ, ㄳ → ㄱㅅ.
+BASIC = 'ㄱㄴㄷㄹㅁㅂㅅㅇㅈㅊㅋㅌㅍㅎㅏㅑㅓㅕㅗㅛㅜㅠㅡㅣ'
+CHO = ['ㄱ', 'ㄱㄱ', 'ㄴ', 'ㄷ', 'ㄷㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅂㅂ', 'ㅅ', 'ㅅㅅ', 'ㅇ', 'ㅈ', 'ㅈㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ']
+JUNG = ['ㅏ', 'ㅏㅣ', 'ㅑ', 'ㅑㅣ', 'ㅓ', 'ㅓㅣ', 'ㅕ', 'ㅕㅣ', 'ㅗ', 'ㅗㅏ', 'ㅗㅏㅣ', 'ㅗㅣ', 'ㅛ', 'ㅜ', 'ㅜㅓ', 'ㅜㅓㅣ',
+        'ㅜㅣ', 'ㅠ', 'ㅡ', 'ㅡㅣ', 'ㅣ']
+JONG = ['', 'ㄱ', 'ㄱㄱ', 'ㄱㅅ', 'ㄴ', 'ㄴㅈ', 'ㄴㅎ', 'ㄷ', 'ㄹ', 'ㄹㄱ', 'ㄹㅁ', 'ㄹㅂ', 'ㄹㅅ', 'ㄹㅌ', 'ㄹㅍ', 'ㄹㅎ',
+        'ㅁ', 'ㅂ', 'ㅂㅅ', 'ㅅ', 'ㅅㅅ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ']
+# 겹자모 한 글자를 기본 자모로
+SPLIT = {
+    'ㄲ': 'ㄱㄱ', 'ㄸ': 'ㄷㄷ', 'ㅃ': 'ㅂㅂ', 'ㅆ': 'ㅅㅅ', 'ㅉ': 'ㅈㅈ',
+    'ㅐ': 'ㅏㅣ', 'ㅒ': 'ㅑㅣ', 'ㅔ': 'ㅓㅣ', 'ㅖ': 'ㅕㅣ', 'ㅘ': 'ㅗㅏ', 'ㅙ': 'ㅗㅏㅣ', 'ㅚ': 'ㅗㅣ',
+    'ㅝ': 'ㅜㅓ', 'ㅞ': 'ㅜㅓㅣ', 'ㅟ': 'ㅜㅣ', 'ㅢ': 'ㅡㅣ',
+    'ㄳ': 'ㄱㅅ', 'ㄵ': 'ㄴㅈ', 'ㄶ': 'ㄴㅎ', 'ㄺ': 'ㄹㄱ', 'ㄻ': 'ㄹㅁ', 'ㄼ': 'ㄹㅂ', 'ㄽ': 'ㄹㅅ', 'ㄾ': 'ㄹㅌ',
+    'ㄿ': 'ㄹㅍ', 'ㅀ': 'ㄹㅎ', 'ㅄ': 'ㅂㅅ',
+}
 
-# 두벌식: 자판 글자 → 자모 (Shift는 된소리와 ㅒ ㅖ)
+# 두벌식: 자판 글자 → 자모 (Shift는 된소리와 ㅒ ㅖ). 겹자모는 split_jamo로 푼다.
 KEYMAP = dict(zip('qwertyuiopasdfghjklzxcvbnm', 'ㅂㅈㄷㄱㅅㅛㅕㅑㅐㅔㅁㄴㅇㄹㅎㅗㅓㅏㅣㅋㅌㅊㅍㅠㅜㅡ'))
 SHIFTMAP = {'q': 'ㅃ', 'w': 'ㅉ', 'e': 'ㄸ', 'r': 'ㄲ', 't': 'ㅆ', 'o': 'ㅒ', 'p': 'ㅖ'}
 KEYBOARD = [
-    list('ㅂㅈㄷㄱㅅㅛㅕㅑㅐㅔ'),
+    list('ㅂㅈㄷㄱㅅㅛㅕㅑ'),
     list('ㅁㄴㅇㄹㅎㅗㅓㅏㅣ'),
     list('ㅋㅌㅊㅍㅠㅜㅡ'),
-    list('ㄲㄸㅃㅆㅉㅒㅖ'),
 ]
+
+
+def split_jamo(j: str) -> list[str]:
+    """자모 한 글자를 기본 자모들로: ㅐ → [ㅏ, ㅣ]."""
+    return list(SPLIT.get(j, j))
 
 
 def decompose(word: str) -> list[str] | None:
@@ -24,7 +38,7 @@ def decompose(word: str) -> list[str] | None:
         code = ord(ch) - 0xAC00
         if not 0 <= code <= 11171:
             return None
-        out.append(CHO[code // 588])
+        out.extend(CHO[code // 588])
         out.extend(JUNG[(code % 588) // 28])
         out.extend(JONG[code % 28])
     return out
@@ -32,18 +46,19 @@ def decompose(word: str) -> list[str] | None:
 
 def _syllable(jamo: list[str]):
     """앞에서부터 한 글자를 만드는 모든 방법: (글자, 쓴 자모 수)."""
-    if not jamo or jamo[0] not in CHO:
-        return
-    cho = CHO.index(jamo[0])
-    for vl in (1, 2):
-        v = ''.join(jamo[1:1 + vl])
-        if len(jamo) < 1 + vl or v not in JUNG:
+    for cl in (1, 2):
+        c = ''.join(jamo[:cl])
+        if len(jamo) < cl or c not in CHO:
             continue
-        for fl in (0, 1, 2):
-            f = ''.join(jamo[1 + vl:1 + vl + fl])
-            if len(jamo) < 1 + vl + fl or f not in JONG:
+        for vl in (1, 2, 3):
+            v = ''.join(jamo[cl:cl + vl])
+            if len(jamo) < cl + vl or v not in JUNG:
                 continue
-            yield chr(0xAC00 + cho * 588 + JUNG.index(v) * 28 + JONG.index(f)), 1 + vl + fl
+            for fl in (0, 1, 2):
+                f = ''.join(jamo[cl + vl:cl + vl + fl])
+                if len(jamo) < cl + vl + fl or f not in JONG:
+                    continue
+                yield chr(0xAC00 + CHO.index(c) * 588 + JUNG.index(v) * 28 + JONG.index(f)), cl + vl + fl
 
 
 def compose(jamo: list[str]) -> str | None:

@@ -9,7 +9,7 @@ import pygame
 from core import (BLUE, DGRAY, GREEN, H, LAVENDER, LIME, NAVY, PAL, PINK, RED, SCALE, W, WHITE, YELLOW,
                   add_score, kst_day, load_records, set_streak, use_bonus)
 from fx import Juice
-from games.jamo_rules import KEYBOARD, WORDS, compose, daily_answer, decompose, judge, key_to_jamo
+from games.jamo_rules import KEYBOARD, WORDS, compose, daily_answer, decompose, judge, key_to_jamo, split_jamo
 
 CELL, PITCH = 13, 15
 GX, GY = 18, 20
@@ -82,9 +82,10 @@ class Jamo:
         return None
 
     def type(self, j: str) -> None:
-        if len(self.cur) < 5 and not self.done:
-            self.cur.append(j)
-            self.pop[len(self.cur) - 1] = 8
+        for part in split_jamo(j):  # ㅐ는 ㅏ ㅣ 두 칸
+            if len(self.cur) < 5 and not self.done:
+                self.cur.append(part)
+                self.pop[len(self.cur) - 1] = 8
 
     def click(self, x: int, y: int) -> None:
         for r, line in enumerate(KEYBOARD):

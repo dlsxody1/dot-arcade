@@ -1,21 +1,29 @@
 // 자모 다섯 칸 규칙(game/games/jamo_rules.py와 같은 규칙과 낱말 목록).
 
-const CHO = 'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ'
-const JUNG = ['ㅏ', 'ㅐ', 'ㅑ', 'ㅒ', 'ㅓ', 'ㅔ', 'ㅕ', 'ㅖ', 'ㅗ', 'ㅗㅏ', 'ㅗㅐ', 'ㅗㅣ', 'ㅛ', 'ㅜ', 'ㅜㅓ', 'ㅜㅔ', 'ㅜㅣ', 'ㅠ', 'ㅡ', 'ㅡㅣ', 'ㅣ']
-const JONG = ['', 'ㄱ', 'ㄲ', 'ㄱㅅ', 'ㄴ', 'ㄴㅈ', 'ㄴㅎ', 'ㄷ', 'ㄹ', 'ㄹㄱ', 'ㄹㅁ', 'ㄹㅂ', 'ㄹㅅ', 'ㄹㅌ', 'ㄹㅍ', 'ㄹㅎ', 'ㅁ', 'ㅂ', 'ㅂㅅ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ']
+// 모든 글자를 기본 자모 24개(자음 14, 모음 10)로 푼다: ㄲ → ㄱㄱ, ㅐ → ㅏㅣ, ㅙ → ㅗㅏㅣ, ㄳ → ㄱㅅ.
+const BASIC = new Set('ㄱㄴㄷㄹㅁㅂㅅㅇㅈㅊㅋㅌㅍㅎㅏㅑㅓㅕㅗㅛㅜㅠㅡㅣ')
+const CHO = ['ㄱ', 'ㄱㄱ', 'ㄴ', 'ㄷ', 'ㄷㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅂㅂ', 'ㅅ', 'ㅅㅅ', 'ㅇ', 'ㅈ', 'ㅈㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ']
+const JUNG = ['ㅏ', 'ㅏㅣ', 'ㅑ', 'ㅑㅣ', 'ㅓ', 'ㅓㅣ', 'ㅕ', 'ㅕㅣ', 'ㅗ', 'ㅗㅏ', 'ㅗㅏㅣ', 'ㅗㅣ', 'ㅛ', 'ㅜ', 'ㅜㅓ', 'ㅜㅓㅣ', 'ㅜㅣ', 'ㅠ', 'ㅡ', 'ㅡㅣ', 'ㅣ']
+const JONG = ['', 'ㄱ', 'ㄱㄱ', 'ㄱㅅ', 'ㄴ', 'ㄴㅈ', 'ㄴㅎ', 'ㄷ', 'ㄹ', 'ㄹㄱ', 'ㄹㅁ', 'ㄹㅂ', 'ㄹㅅ', 'ㄹㅌ', 'ㄹㅍ', 'ㄹㅎ', 'ㅁ', 'ㅂ', 'ㅂㅅ', 'ㅅ', 'ㅅㅅ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ']
+/** 겹자모 한 글자를 기본 자모로. */
+const SPLIT: Record<string, string> = {
+  ㄲ: 'ㄱㄱ', ㄸ: 'ㄷㄷ', ㅃ: 'ㅂㅂ', ㅆ: 'ㅅㅅ', ㅉ: 'ㅈㅈ',
+  ㅐ: 'ㅏㅣ', ㅒ: 'ㅑㅣ', ㅔ: 'ㅓㅣ', ㅖ: 'ㅕㅣ', ㅘ: 'ㅗㅏ', ㅙ: 'ㅗㅏㅣ', ㅚ: 'ㅗㅣ', ㅝ: 'ㅜㅓ', ㅞ: 'ㅜㅓㅣ', ㅟ: 'ㅜㅣ', ㅢ: 'ㅡㅣ',
+  ㄳ: 'ㄱㅅ', ㄵ: 'ㄴㅈ', ㄶ: 'ㄴㅎ', ㄺ: 'ㄹㄱ', ㄻ: 'ㄹㅁ', ㄼ: 'ㄹㅂ', ㄽ: 'ㄹㅅ', ㄾ: 'ㄹㅌ', ㄿ: 'ㄹㅍ', ㅀ: 'ㄹㅎ', ㅄ: 'ㅂㅅ',
+}
 const KEYS = 'qwertyuiopasdfghjklzxcvbnm'
 const KEY_JAMO = 'ㅂㅈㄷㄱㅅㅛㅕㅑㅐㅔㅁㄴㅇㄹㅎㅗㅓㅏㅣㅋㅌㅊㅍㅠㅜㅡ'
 const SHIFT: Record<string, string> = { Q: 'ㅃ', W: 'ㅉ', E: 'ㄸ', R: 'ㄲ', T: 'ㅆ', O: 'ㅒ', P: 'ㅖ' }
-const ALL_JAMO = new Set([...CHO, ...JUNG.filter(v => v.length === 1)])
 
-export const KEYBOARD = ['ㅂㅈㄷㄱㅅㅛㅕㅑㅐㅔ', 'ㅁㄴㅇㄹㅎㅗㅓㅏㅣ', 'ㅋㅌㅊㅍㅠㅜㅡ', 'ㄲㄸㅃㅆㅉㅒㅖ']
+/** 화면 자판: 기본 자모만(겹자모는 두 번 누른다: ㅐ = ㅏ ㅣ). */
+export const KEYBOARD = ['ㅂㅈㄷㄱㅅㅛㅕㅑ', 'ㅁㄴㅇㄹㅎㅗㅓㅏㅣ', 'ㅋㅌㅊㅍㅠㅜㅡ']
 
 export function decompose(word: string): string[] | undefined {
   const out: string[] = []
   for (const ch of word) {
     const code = ch.charCodeAt(0) - 0xac00
     if (code < 0 || code > 11171) return undefined
-    out.push(CHO[Math.floor(code / 588)] ?? '')
+    out.push(...(CHO[Math.floor(code / 588)] ?? ''))
     out.push(...(JUNG[Math.floor((code % 588) / 28)] ?? ''))
     out.push(...(JONG[code % 28] ?? ''))
   }
@@ -23,15 +31,17 @@ export function decompose(word: string): string[] | undefined {
 }
 
 function* syllables(j: string[]): Generator<[string, number]> {
-  const cho = CHO.indexOf(j[0] ?? '')
-  if (cho < 0) return
-  for (const vl of [1, 2]) {
-    const v = j.slice(1, 1 + vl).join('')
-    if (j.length < 1 + vl || !JUNG.includes(v)) continue
-    for (const fl of [0, 1, 2]) {
-      const f = j.slice(1 + vl, 1 + vl + fl).join('')
-      if (j.length < 1 + vl + fl || !JONG.includes(f)) continue
-      yield [String.fromCharCode(0xac00 + cho * 588 + JUNG.indexOf(v) * 28 + JONG.indexOf(f)), 1 + vl + fl]
+  for (const cl of [1, 2]) {
+    const c = j.slice(0, cl).join('')
+    if (j.length < cl || !CHO.includes(c)) continue
+    for (const vl of [1, 2, 3]) {
+      const v = j.slice(cl, cl + vl).join('')
+      if (j.length < cl + vl || !JUNG.includes(v)) continue
+      for (const fl of [0, 1, 2]) {
+        const f = j.slice(cl + vl, cl + vl + fl).join('')
+        if (j.length < cl + vl + fl || !JONG.includes(f)) continue
+        yield [String.fromCharCode(0xac00 + CHO.indexOf(c) * 588 + JUNG.indexOf(v) * 28 + JONG.indexOf(f)), cl + vl + fl]
+      }
     }
   }
 }
@@ -62,16 +72,17 @@ export function judge(guess: readonly string[], answer: readonly string[]): Mark
   return marks
 }
 
-/** 글자마다 자모로: 완성 글자는 풀고, 자모는 그대로, 영문은 두벌식 자리로. 섞여도 된다. 못 바꾸는 글자가 있으면 undefined. */
+/** 글자마다 기본 자모로: 완성 글자와 겹자모는 풀고, 영문은 두벌식 자리로. 섞여도 된다. 못 바꾸는 글자가 있으면 undefined. */
 export function toJamo(input: string): string[] | undefined {
   const out: string[] = []
   for (const c of input.replace(/\s/g, '')) {
     if (/[가-힣]/.test(c)) out.push(...(decompose(c) ?? []))
-    else if (ALL_JAMO.has(c)) out.push(c)
+    else if (BASIC.has(c)) out.push(c)
+    else if (SPLIT[c] !== undefined) out.push(...SPLIT[c])
     else if (/[a-zA-Z]/.test(c)) {
       const j = SHIFT[c] ?? KEY_JAMO[KEYS.indexOf(c.toLowerCase())]
       if (j === undefined) return undefined
-      out.push(j)
+      out.push(...(SPLIT[j] ?? j))
     } else return undefined
   }
   return out

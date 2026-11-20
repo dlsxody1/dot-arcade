@@ -62,6 +62,8 @@ export function normalizeTyped(value: string): string {
 async function onTyped($: Dollar, value: string) {
   const text = normalizeTyped(value)
   if (text !== (await read($, draftA)).text) await setDraft($, text)
+  // 완성 글자가 들어오면 한글 입력기가 켜진 것: 끄면 키마다 바로 찍힌다고 알려 준다
+  if (/[가-힣]/.test(value)) await update($, msgA, () => '한/영이 켜져 있어 글자가 완성될 때 찍혀요. 한/영 키로 끄면 키마다 바로 찍혀요.')
 }
 
 /** 자판 한 칸: 자모를 덧붙인다(다섯 개까지). */
@@ -282,7 +284,12 @@ export async function JamoView($: Dollar, els: Els, run: (p: Promise<unknown>) =
             onInput={v => run(onTyped($, v))}
             onSubmit={v => run(guess($, normalizeTyped(v)))}
           />
-          {msg !== '' && <Text>{msg}</Text>}
+          {msg !== '' && <Text color="#ffec27">{msg}</Text>}
+          <Box flexDirection="column" alignItems="center">
+            <Text dimColor>한/영을 끄고 두벌식 자리로 치면(a → ㅁ, k → ㅏ) 키마다 바로 칸에 찍혀요.</Text>
+            <Text dimColor>Enter: 입력 · Backspace: 지우기 · Esc: 채팅으로 · 화면 자판을 눌러도 돼요.</Text>
+            <Text dimColor>🟩 자리까지 맞음 · 🟧 있지만 자리 다름 · ⬛ 없음</Text>
+          </Box>
         </Box>
       )}
 

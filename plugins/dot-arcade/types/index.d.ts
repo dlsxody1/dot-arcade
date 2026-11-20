@@ -31,6 +31,7 @@ declare module 'claude-code' {
       launch: string
       input: { seq: number; key: string }
       keysField: string
+      keysTip: string
       jamo: Shaped<JamoGame>
       jamoMsg: string
       jamoDraft: { text: string; seq: number }

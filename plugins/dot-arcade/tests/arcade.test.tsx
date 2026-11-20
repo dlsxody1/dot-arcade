@@ -28,13 +28,18 @@ test('자모: 한글, 자모, 두벌식 자리 입력을 모두 받고 5칸이 �
   expect(readGuess('ㅂㅏㄹㅏㅁ')).toEqual({ jamo: ['ㅂ', 'ㅏ', 'ㄹ', 'ㅏ', 'ㅁ'], word: '바람' })
   expect(readGuess('사ㄱhk')).toEqual({ jamo: ['ㅅ', 'ㅏ', 'ㄱ', 'ㅗ', 'ㅏ'], word: '사과' }) // 섞어 쳐도 된다
   expect('error' in readGuess('나무')).toBe(true)
+  // 겹자모는 모두 기본 자모로 푼다: ㄲ → ㄱㄱ, ㅐ → ㅏㅣ, ㅔ → ㅓㅣ
+  expect(readGuess('까치')).toEqual({ jamo: ['ㄱ', 'ㄱ', 'ㅏ', 'ㅊ', 'ㅣ'], word: '까치' })
+  expect(readGuess('Rkcl')).toEqual({ jamo: ['ㄱ', 'ㄱ', 'ㅏ', 'ㅊ', 'ㅣ'], word: '까치' }) // Shift+r = ㄲ
+  expect(readGuess('ㅅㅐㄱㅣ')).toEqual({ jamo: ['ㅅ', 'ㅏ', 'ㅣ', 'ㄱ', 'ㅣ'], word: '새기' })
+  expect('error' in readGuess('새벽')).toBe(true) // ㅅㅏㅣㅂㅕㄱ: 6칸
   expect('error' in readGuess('ㅏㅏㅏㅏㅏ')).toBe(true)
 })
 
 test('자모: 낱말 목록과 오늘의 낱말이 큰 창(파이썬)판과 같다', () => {
-  expect(WORDS.length).toBe(193)
+  expect(WORDS.length).toBe(162)
   expect(kstDay(NOW)).toBe(20776)
-  expect(dailyAnswer(20776)).toBe('문어')
+  expect(dailyAnswer(20776)).toBe('이름')
   expect(dailyAnswer(20777)).toBe('음표')
 })
 
@@ -201,6 +206,35 @@ test('창: 게임 셋이 나오고, 고르면 창 안에서 그 게임이 돈다
   }
 })
 
+test('창: VS Code와 모바일에서는 자모가 돌고, 달리기는 열 곳을 알려 준다', async ($, on) => {
+  world(on)
+  for (const surface of ['vscode', 'mobile'] as const) {
+    const ui = await $.ui.mount({ ...PANE, surface })
+    await ui.press({ key: 'open-runner' })
+    expect(await ui.find({ type: 'Text', text: /실시간 게임을 그릴 수 없어요/ })).toBeDefined()
+    await ui.press({ key: 'back' })
+    await ui.press({ key: 'open-jamo' })
+    // 모바일 앱은 Input을 받겠다고 한 앱에만 그려 주므로, 화면 자판은 어디서나 된다
+    await ui.press({ key: 'k-ㅂ' })
+    expect(await ui.find({ type: 'Text', text: 'ㅂ' })).toBeDefined()
+    if (surface === 'vscode') expect(await ui.find({ key: 'typing' })).toBeDefined()
+    await ui.press({ key: 'back' })
+    await ui.unmount()
+  }
+})
+
+test('창: 한/영이 켜진 채 치면 끄라고 알려 준다', async ($, on) => {
+  world(on)
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  await ui.press({ key: 'open-runner' })
+  expect(await ui.find({ type: 'Text', text: /한\/영은 꺼 두세요/ })).toBeDefined()
+  await ui.input({ key: 'keys', text: 'ㅁ', kind: 'change' })
+  expect(await ui.find({ type: 'Text', text: /한\/영이 켜져 있어요/ })).toBeDefined()
+  await ui.input({ key: 'keys', text: 'ㅁa', kind: 'change' })
+  expect(await ui.find({ type: 'Text', text: /한\/영이 켜져 있어요/ })).toBeUndefined()
+  await ui.unmount()
+})
+
 test('창: 자모 다섯 칸을 창 안에서 풀면 칸이 뒤집히고 기록이 남는다', async ($, on) => {
   const { files, clock } = world(on)
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
@@ -217,9 +251,13 @@ test('창: 자모 다섯 칸을 창 안에서 풀면 칸이 뒤집히고 기록�
   expect((await ui.find({ key: 'typing' }))?.props).toMatchObject({ value: 'ㅁ', autoFocus: true }) // 칸도 자모로 다시 그려진다
   await ui.input({ key: 'typing', text: '나무' }) // 4칸이면 돌려보낸다
   expect(await ui.find({ type: 'Text', text: /자모가 딱 5개인/ })).toBeDefined()
-  for (const text of ['a', 'an', 'ans', 'ansd', 'ansdj']) await ui.input({ key: 'typing', text, kind: 'change' }) // 문어
-  expect((await ui.find({ key: 'typing' }))?.props).toMatchObject({ value: 'ㅁㅜㄴㅇㅓ' })
-  await ui.input({ key: 'typing', text: 'ㅁㅜㄴㅇㅓ' })
+  await ui.input({ key: 'typing', text: 'ㅐ', kind: 'change' }) // 겹모음은 두 칸
+  expect((await ui.find({ key: 'typing' }))?.props).toMatchObject({ value: 'ㅏㅣ' })
+  await ui.input({ key: 'typing', text: '나무' })
+  expect(await ui.find({ type: 'Text', text: /자모가 딱 5개인/ })).toBeDefined()
+  for (const text of ['d', 'dl', 'dlf', 'dlfm', 'dlfma']) await ui.input({ key: 'typing', text, kind: 'change' }) // 이름
+  expect((await ui.find({ key: 'typing' }))?.props).toMatchObject({ value: 'ㅇㅣㄹㅡㅁ' })
+  await ui.input({ key: 'typing', text: 'ㅇㅣㄹㅡㅁ' })
   await clock.advance(1000)
   expect(await ui.find({ type: 'Text', text: /맞혔어요! 1번 만에 600점/ })).toBeDefined()
   expect((await ui.findAll({ type: 'Text', text: /^[▀▄█▌▐*+]$/ })).length).toBeGreaterThan(10) // 색종이가 터진다

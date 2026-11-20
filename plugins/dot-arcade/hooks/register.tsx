@@ -25,6 +25,26 @@ const sessionsA = atom({ plugin: 'dot-arcade', key: 'sessions' } as const, { wor
 const launchA = atom({ plugin: 'dot-arcade', key: 'launch' } as const, '')
 const inputA = atom({ plugin: 'dot-arcade', key: 'input' } as const, { seq: 0, key: '' })
 const keysFieldA = atom({ plugin: 'dot-arcade', key: 'keysField' } as const, '')
+const keysTipA = atom({ plugin: 'dot-arcade', key: 'keysTip' } as const, '')
+
+const IME_TIP = '한/영이 켜져 있어요. 한/영 키로 끄면 키가 바로 먹혀요.'
+
+/** 게임 화면 아래 조작 안내. */
+const HELP: Record<'runner' | 'shooter', string[]> = {
+  runner: [
+    '스페이스: 점프 · 공중에서 스페이스 한 번 더: 내리찍기',
+    '버그는 밟거나 내리찍으면 잡혀요. 연달아 밟으면 점수가 두 배씩.',
+  ],
+  shooter: [
+    'a: 왼쪽 · d: 오른쪽 · 스페이스: 시작, 게이지가 차면 산탄',
+    '연사는 자동이에요. 파란 캡슐을 먹으면 더블 샷.',
+  ],
+}
+const HELP_KEYS = [
+  '한/영은 꺼 두세요. 켜져 있으면 키가 한 박자 늦게 먹혀요.',
+  '키는 아래 키 칸으로 들어가요. 채팅으로 돌아가려면 Esc.',
+  '방향키를 쓰려면 게임 화면을 한 번 클릭하세요.',
+]
 
 /** 키 받는 칸이 마지막으로 들고 있던 글자(새로 친 글자만 골라내려고). */
 let lastKeys = ''
@@ -33,6 +53,11 @@ let lastKeys = ''
 async function keysTyped($: Dollar, value: string) {
   const added = addedChars(lastKeys, value)
   lastKeys = value
+  // 한글 입력기가 켜져 있으면 알려 준다(a가 ㅁ으로 들어오면)
+  if (added.length > 0) {
+    const tip = added.some(c => /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(c)) ? IME_TIP : ''
+    if (tip !== (await read($, keysTipA))) await update($, keysTipA, () => tip)
+  }
   for (const c of added) {
     const k = gameKey(c)
     if (k !== undefined) await update($, inputA, cur => ({ seq: cur.seq + 1, key: k }))
@@ -257,9 +282,13 @@ export const register: Register = on => {
       )
     }
 
-    if ((view === 'runner' || view === 'shooter') && 'Client' in els) {
+    // 실시간 칸(Client)은 터미널과 데스크톱 앱만 그린다. 다른 화면의 표에는 있어도 아무것도 안 그려진다.
+    const live = e.surface === 'terminal' || e.surface === 'desktop'
+
+    if ((view === 'runner' || view === 'shooter') && live && 'Client' in els) {
       const input = await read($, inputA)
       const keysField = await read($, keysFieldA)
+      const keysTip = await read($, keysTipA)
       const props = { bonus, best: records.games[view].best, cols, input }
       // 화면 버튼을 눌러도 포커스는 키 받는 칸으로 돌아간다
       const key = (k: string) => () => run(update($, inputA, cur => ({ seq: cur.seq + 1, key: k })).then(() => focusKeys($)))
@@ -291,6 +320,30 @@ export const register: Register = on => {
             <Button key="key-w" hotkey="w" variant="primary" label={view === 'runner' ? '점프·내리찍기' : '시작·산탄'} onPress={key(' ')} />
             <Button key="key-d" hotkey="d" label="→" onPress={key('right')} />
           </Box>
+          {keysTip !== '' && <Text color="#ffec27">{keysTip}</Text>}
+          <Box flexDirection="column" marginTop={1}>
+            {HELP[view].map(line => <Text>{line}</Text>)}
+            {HELP_KEYS.map(line => <Text dimColor>{line}</Text>)}
+          </Box>
+          {launched !== '' && <Text dimColor>{launched}</Text>}
+        </Box>
+      )
+    }
+
+    if (view === 'runner' || view === 'shooter') {
+      // VS Code와 모바일 앱에는 Client(실시간으로 그리는 칸)가 없다
+      return (
+        <Box flexDirection="column">
+          {header}
+          <Box flexDirection="row" gap={1} marginBottom={1}>
+            <Button key="back" label="목록" onPress={() => run(open($, 'menu'))} />
+            <Text weight="bold">{GAMES.find(g => g.id === view)?.name}</Text>
+          </Box>
+          <Text>이 화면에서는 실시간 게임을 그릴 수 없어요.</Text>
+          <Text>터미널의 claude나 Claude 데스크톱 앱에서 /arcade 로 열어 주세요. 자모 다섯 칸은 여기서도 돼요.</Text>
+          <Box flexDirection="row" gap={1} marginTop={1}>
+            <Button key="big" label="이 PC에 큰 창으로 띄우기" onPress={() => run(launch($, view))} />
+          </Box>
           {launched !== '' && <Text dimColor>{launched}</Text>}
         </Box>
       )
@@ -311,6 +364,7 @@ export const register: Register = on => {
               <Box flexDirection="row" gap={1}>
                 <Button key={`open-${game.id}`} variant="primary" label={game.name} onPress={() => run(open($, game.id).then(() => focusFor($, game.id)))} />
                 <Text>: {game.desc}</Text>
+                {!live && game.id !== 'jamo' && <Text dimColor>(터미널, 데스크톱 앱에서)</Text>}
               </Box>
               <Box flexDirection="row" gap={2}>
                 <PixelRows els={els} grid={thumb.grid} bg={thumb.bg} />
@@ -319,7 +373,8 @@ export const register: Register = on => {
             </Box>
           )
         })}
-        <Box flexDirection="row" gap={1}>
+        <Text dimColor>게임을 고르면 키가 바로 게임으로 들어가요. 한/영은 꺼 두세요. 채팅으로 돌아가려면 Esc.</Text>
+        <Box flexDirection="row" gap={1} marginTop={1}>
           <Button key="open-big" label="오락실 큰 창(pygame)" onPress={() => run(launch($, 'menu'))} />
         </Box>
         {launched !== '' && <Text dimColor>{launched}</Text>}
