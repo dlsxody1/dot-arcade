@@ -35,7 +35,7 @@ export async function openJamo($: Dollar) {
     return { ...EMPTY, mode: 'daily', day: today, answer: dailyAnswer(today) }
   })
   await setDraft($, '')
-  await update($, msgA, () => '타자 칸을 한 번 클릭하고 치세요. 한/영을 끄면 키마다 바로 칸에 찍혀요. 자판을 눌러도 돼요.')
+  await update($, msgA, () => '바로 치세요. 한/영을 끄면 키마다 바로 칸에 찍혀요(a → ㅁ). 자판을 눌러도 돼요.')
 }
 
 async function practice($: Dollar) {
@@ -44,23 +44,24 @@ async function practice($: Dollar) {
   await update($, msgA, () => '연습 판이에요.')
 }
 
-/** 키가 갈 곳으로 포커스를 옮긴다: 자모 화면에서는 [입력] 버튼(Enter로 입력). 타자 칸은 클릭해야 키를 받는다. */
-export async function focusGuess($: Dollar) {
-  await $.ui.focus({ requestId: 'dot-arcade', key: 'enter' }).catch(() => undefined)
+/** 포커스를 타자 칸으로. 버튼에 포커스가 남으면 글자 키가 채팅 입력칸으로 새기 때문에 버튼을 누른 뒤에도 돌아온다. */
+export async function focusTyping($: Dollar) {
+  await $.ui.focus({ requestId: 'dot-arcade', key: 'typing' }).catch(() => undefined)
 }
 
-/** 훅 쪽(자판 버튼, [삭제], [입력])에서 바꾸면 seq를 올려 타자 칸이 따라오게 한다. */
 async function setDraft($: Dollar, text: string) {
   await update($, draftA, d => ({ text, seq: d.seq + 1 }))
 }
 
-/** 타자 칸이 보낸 내용: 타자 칸은 이미 그 내용을 들고 있으니 seq는 그대로 둔다. */
-export async function draftFromInput($: Dollar, text: string) {
-  await update($, draftA, d => ({ text, seq: d.seq }))
+/** 타자 칸 글자를 자모 다섯 개까지로: 바꿀 수 없는 글자(숫자, 기호)는 버린다. */
+export function normalizeTyped(value: string): string {
+  return [...value].flatMap(c => toJamo(c) ?? []).slice(0, 5).join('')
 }
 
-export async function submitFromInput($: Dollar, text: string) {
-  await guess($, text)
+/** 타자 칸이 바뀔 때마다: 자모로 바꿔 칸에 찍는다. 타자 칸도 자모로 다시 그려진다. */
+async function onTyped($: Dollar, value: string) {
+  const text = normalizeTyped(value)
+  if (text !== (await read($, draftA)).text) await setDraft($, text)
 }
 
 /** 자판 한 칸: 자모를 덧붙인다(다섯 개까지). */
@@ -184,11 +185,13 @@ async function hint($: Dollar) {
 
 type Cell = { ch: string; fill?: string; border: string; bold?: boolean }
 
-export type Els = Pick<Elements['terminal'], 'Box' | 'Text' | 'Button' | 'Client'>
+export type Els = Pick<Elements['terminal'], 'Box' | 'Text' | 'Button' | 'Input'>
 
 export async function JamoView($: Dollar, els: Els, run: (p: Promise<unknown>) => void, cols = 70) {
   paneCols = cols
-  const { Box, Text, Button, Client } = els
+  const { Box, Text, Button, Input } = els
+  // 버튼을 누른 뒤에는 포커스를 타자 칸으로 돌린다
+  const press = (p: Promise<unknown>) => run(p.then(() => focusTyping($)))
   const g = await read($, jamoA)
   const msg = await read($, msgA)
   const draft = await read($, draftA)
@@ -228,7 +231,7 @@ export async function JamoView($: Dollar, els: Els, run: (p: Promise<unknown>) =
   }
   // 지금 치고 있는 자모는 흰 바탕으로 바로 표시
   const key = (ch: string) => (
-    <Button key={`k-${ch}`} plain onPress={() => run(typeJamo($, ch))}>
+    <Button key={`k-${ch}`} plain onPress={() => press(typeJamo($, ch))}>
       <Text backgroundColor={typing.has(ch) ? '#ffffff' : keyColor(ch)} color={typing.has(ch) ? '#0d1030' : '#ffffff'} weight="bold">{` ${ch} `}</Text>
     </Button>
   )
@@ -260,16 +263,25 @@ export async function JamoView($: Dollar, els: Els, run: (p: Promise<unknown>) =
             <Box flexDirection="row" gap={1}>{[...line].map(key)}</Box>
           ))}
           <Box flexDirection="row" gap={1}>
-            <Button key="enter" variant="primary" autoFocus label="입력" onPress={() => run(guess($, draft.text))} />
+            <Button key="enter" variant="primary" label="입력" onPress={() => press(guess($, draft.text))} />
             {[...(KEYBOARD[2] ?? '')].map(key)}
-            <Button key="erase" label="삭제" onPress={() => run(erase($))} />
+            <Button key="erase" label="삭제" onPress={() => press(erase($))} />
           </Box>
           <Box flexDirection="row" gap={1}>
             {[...(KEYBOARD[3] ?? '')].map(key)}
-            <Button key="hint" label={`힌트 (보너스 ${bonus})`} onPress={() => run(hint($))} />
-            {g.mode === 'practice' && <Button key="new" label="새 낱말" onPress={() => run(practice($))} />}
+            <Button key="hint" label={`힌트 (보너스 ${bonus})`} onPress={() => press(hint($))} />
+            {g.mode === 'practice' && <Button key="new" label="새 낱말" onPress={() => press(practice($))} />}
           </Box>
-          <Client key="jamo-input" module="./jamo_input.tsx" props={{ text: draft.text, seq: draft.seq, disabled: g.revealed < 5 }} />
+          <Input
+            key="typing"
+            autoFocus
+            label="타자 "
+            placeholder="바로 치세요 (한/영 끄면 키마다 바로)"
+            submitLabel="입력"
+            value={draft.text}
+            onInput={v => run(onTyped($, v))}
+            onSubmit={v => run(guess($, normalizeTyped(v)))}
+          />
           {msg !== '' && <Text>{msg}</Text>}
         </Box>
       )}
@@ -278,7 +290,7 @@ export async function JamoView($: Dollar, els: Els, run: (p: Promise<unknown>) =
         <Box flexDirection="column" marginTop={1} alignItems="center">
           <Text color={g.isWon ? '#00e436' : '#ff004d'} weight="bold">{g.result}</Text>
           <Box flexDirection="row" gap={1}>
-            <Button key="again" variant="primary" label="연습 한 판 더" onPress={() => run(practice($))} />
+            <Button key="again" variant="primary" label="연습 한 판 더" onPress={() => press(practice($))} />
             <Button key="back-done" label="목록으로" onPress={() => run(update($, viewA, () => 'menu'))} />
           </Box>
         </Box>

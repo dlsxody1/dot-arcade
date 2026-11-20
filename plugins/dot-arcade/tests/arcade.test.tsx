@@ -1,8 +1,9 @@
 import { expect, mock, test } from 'claude-code/testing'
 
 import { WORDS, dailyAnswer, kstDay, readGuess } from '../hooks/jamo'
-import { burstConfetti, stepConfetti } from '../hooks/jamo_view'
+import { burstConfetti, normalizeTyped, stepConfetti } from '../hooks/jamo_view'
 import { Juice, normKey } from '../hooks/juice'
+import { addedChars, gameKey } from '../hooks/keys'
 import { labelOf, launchArgv, stamp, topicOf } from '../hooks/register'
 import { H, T, newRun, press, stepRun } from '../hooks/runner_rules'
 import { SHIP_Y, newShoot, pressShoot, stepShoot } from '../hooks/shooter_rules'
@@ -81,6 +82,15 @@ test('달리기: 구덩이에 빠지면 넘어지고, 버그를 밟으면 연속
   expect(s.bugs[0]?.alive).toBe(false)
   expect(s.stomps).toBe(50)
   expect(s.vy).toBeLessThan(0)
+})
+
+test('키 받는 칸: 새로 친 글자만 골라 게임 키로 바꾼다', () => {
+  expect(addedChars('', ' ')).toEqual([' '])
+  expect(addedChars('ad', 'a d')).toEqual([' ']) // 커서를 옮겨 가운데 쳐도
+  expect(addedChars('add', 'ad')).toEqual([]) // 지우기는 무시
+  expect(['a', 'ㅁ', 'd', 'ㅇ', ' ', 'w', 'x'].map(gameKey)).toEqual(['left', 'left', 'right', 'right', ' ', ' ', undefined])
+  expect(normalizeTyped('주a1')).toBe('ㅈㅜㅁ') // 한글은 풀고, 두벌식 자리는 바꾸고, 숫자는 버린다
+  expect(normalizeTyped('ㅁㅜㄴㅇㅓㅇ')).toBe('ㅁㅜㄴㅇㅓ') // 다섯 개까지
 })
 
 test('키 이름: 터미널이 space, enter로 넘겨도 같은 키로 본다', () => {
@@ -201,16 +211,15 @@ test('창: 자모 다섯 칸을 창 안에서 풀면 칸이 뒤집히고 기록�
   expect(await ui.find({ type: 'Text', text: 'ㅂ' })).toBeDefined()
   await ui.press({ key: 'erase' })
   await ui.press({ key: 'erase' })
-  // 타자 칸: 키마다 바로 칸에 찍힌다(한/영 끈 두벌식 자리)
-  await ui.key({ key: 'a', in: 'jamo-input' })
+  // 타자 칸(포커스가 처음부터 여기): 키마다 바로 칸에 찍힌다(한/영 끈 두벌식 자리)
+  await ui.input({ key: 'typing', text: 'a', kind: 'change' })
   expect(await ui.find({ type: 'Text', text: 'ㅁ' })).toBeDefined()
-  await ui.key({ key: 'backspace', in: 'jamo-input' })
-  for (const k of ['s', 'k', 'a', 'n', 'return']) await ui.key({ key: k, in: 'jamo-input' }) // 나무: 4칸
+  expect((await ui.find({ key: 'typing' }))?.props).toMatchObject({ value: 'ㅁ', autoFocus: true }) // 칸도 자모로 다시 그려진다
+  await ui.input({ key: 'typing', text: '나무' }) // 4칸이면 돌려보낸다
   expect(await ui.find({ type: 'Text', text: /자모가 딱 5개인/ })).toBeDefined()
-  await ui.press({ key: 'erase' })
-  for (let i = 0; i < 4; i++) await ui.press({ key: 'erase' })
-  for (const k of ['a', 'n', 's', 'd', 'j']) await ui.key({ key: k, in: 'jamo-input' }) // 문어
-  await ui.press({ key: 'enter' })
+  for (const text of ['a', 'an', 'ans', 'ansd', 'ansdj']) await ui.input({ key: 'typing', text, kind: 'change' }) // 문어
+  expect((await ui.find({ key: 'typing' }))?.props).toMatchObject({ value: 'ㅁㅜㄴㅇㅓ' })
+  await ui.input({ key: 'typing', text: 'ㅁㅜㄴㅇㅓ' })
   await clock.advance(1000)
   expect(await ui.find({ type: 'Text', text: /맞혔어요! 1번 만에 600점/ })).toBeDefined()
   expect((await ui.findAll({ type: 'Text', text: /^[▀▄█▌▐*+]$/ })).length).toBeGreaterThan(10) // 색종이가 터진다
@@ -242,6 +251,12 @@ test('창: 달리기와 슈팅 모듈이 키를 받고 프레임을 돌린다', 
     expect(JSON.stringify(await ui.drawn({ in: 'shooter' }))).toMatch(/점수 /)
     await ui.press({ key: 'key-d' })
     await ui.advance(200)
+    // 키 받는 칸: 포커스가 처음부터 여기 있고, 친 글자를 게임 키로 넘긴다
+    expect((await ui.find({ key: 'keys' }))?.props).toMatchObject({ autoFocus: true })
+    const before = JSON.stringify(await ui.drawn({ in: 'shooter' }))
+    for (const text of ['d', 'dd', 'ddd']) await ui.input({ key: 'keys', text, kind: 'change' })
+    await ui.advance(100)
+    expect(JSON.stringify(await ui.drawn({ in: 'shooter' }))).not.toBe(before)
     await ui.press({ key: 'back' })
     await ui.unmount()
   }

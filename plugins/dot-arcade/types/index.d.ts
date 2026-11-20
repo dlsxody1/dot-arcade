@@ -30,6 +30,7 @@ declare module 'claude-code' {
       sessions: SessionSummary
       launch: string
       input: { seq: number; key: string }
+      keysField: string
       jamo: Shaped<JamoGame>
       jamoMsg: string
       jamoDraft: { text: string; seq: number }

@@ -9,7 +9,8 @@ import type { Register } from 'claude-code'
 import type { GameId, SessionSummary, View } from '../types'
 import { EMPTY_RECORDS, PANE, addScore, folder, labelOf, loadBonus, loadRecords, readJson, saveBonus, stamp, useBonus } from './data'
 import type { Dollar } from './data'
-import { JamoView, draftFromInput, focusGuess, openJamo, submitFromInput } from './jamo_view'
+import { JamoView, focusTyping, openJamo } from './jamo_view'
+import { KEYS_MAX, addedChars, gameKey } from './keys'
 import { PixelRows, thumbGrid } from './pixel'
 
 export { labelOf, stamp }
@@ -23,6 +24,25 @@ const recordsA = atom({ plugin: 'dot-arcade', key: 'records' } as const, EMPTY_R
 const sessionsA = atom({ plugin: 'dot-arcade', key: 'sessions' } as const, { working: 0, done: 0, note: '' } as SessionSummary)
 const launchA = atom({ plugin: 'dot-arcade', key: 'launch' } as const, '')
 const inputA = atom({ plugin: 'dot-arcade', key: 'input' } as const, { seq: 0, key: '' })
+const keysFieldA = atom({ plugin: 'dot-arcade', key: 'keysField' } as const, '')
+
+/** 키 받는 칸이 마지막으로 들고 있던 글자(새로 친 글자만 골라내려고). */
+let lastKeys = ''
+
+/** 키 받는 칸에 글자가 들어오면 게임 키로 바꿔 Client에 넘기고, 칸이 차면 비운다. */
+async function keysTyped($: Dollar, value: string) {
+  const added = addedChars(lastKeys, value)
+  lastKeys = value
+  for (const c of added) {
+    const k = gameKey(c)
+    if (k !== undefined) await update($, inputA, cur => ({ seq: cur.seq + 1, key: k }))
+  }
+  if (value.length >= KEYS_MAX) {
+    const cleared = (await read($, keysFieldA)) === '' ? ' ' : ''
+    lastKeys = cleared
+    await update($, keysFieldA, () => cleared)
+  }
+}
 
 export const GAMES: readonly { id: GameId; name: string; desc: string }[] = [
   { id: 'jamo', name: '자모 다섯 칸', desc: '두 글자 낱말을 자모 다섯 칸으로 풀어 6번 안에 맞히기' },
@@ -119,14 +139,20 @@ async function launch($: Dollar, game: GameId | 'menu') {
 
 async function open($: Dollar, view: View) {
   if (view === 'jamo') await openJamo($)
+  lastKeys = await read($, keysFieldA) // 다시 그려진 키 받는 칸은 그린 값을 들고 시작한다
   await update($, viewA, () => view)
   await update($, launchA, () => '')
 }
 
-/** 화면을 바꾼 뒤 키가 갈 곳으로 포커스를 옮긴다: 자모는 입력칸, 달리기와 슈팅은 [점프] 버튼. */
+/** 키 받는 칸으로 포커스를 돌린다. 버튼에 포커스가 남으면 글자 키가 채팅 입력칸으로 새기 때문. */
+async function focusKeys($: Dollar) {
+  await $.ui.focus({ requestId: PANE, key: 'keys' }).catch(() => undefined)
+}
+
+/** 화면을 바꾼 뒤 키가 갈 곳으로 포커스를 옮긴다: 자모는 타자 칸, 달리기와 슈팅은 키 받는 칸. */
 async function focusFor($: Dollar, view: View) {
-  if (view === 'jamo') await focusGuess($)
-  else if (view !== 'menu') await $.ui.focus({ requestId: PANE, key: 'key-w' }).catch(() => undefined)
+  if (view === 'jamo') await focusTyping($)
+  else if (view !== 'menu') await focusKeys($)
 }
 
 // ── 등록 ─────────────────────────────────────────────
@@ -183,7 +209,7 @@ export const register: Register = on => {
     const game = GAMES.find(g => g.id === e.args.trim())
     await open($, game?.id ?? 'menu')
     // 높이를 요청해야 터미널 기본 모드(대화 아래에 끼워 열림)에서 게임이 잘리지 않는다.
-    // focus: 창이 키를 받아 W/A/S/D 단축키와 스페이스(포커스된 점프 버튼)로 바로 할 수 있다. Esc는 프롬프트로.
+    // focus: 창이 키를 받고, 포커스는 게임마다 키 받는 칸(Input)에서 시작한다. Esc는 프롬프트로.
     await $.ui.open({ id: PANE, title: TITLE, columns: 72, rows: 44, focus: true, backgroundColor: '#0d1030' })
     focusFor($, game?.id ?? 'menu').catch(() => undefined)
     await ensureWatch($)
@@ -194,9 +220,6 @@ export const register: Register = on => {
     const data = e.data as { type?: string; game?: GameId; score?: number } | undefined
     if (data?.type === 'score' && data.game !== undefined && typeof data.score === 'number') await addScore($, data.game, data.score)
     if (data?.type === 'bonus') await useBonus($)
-    const text = (e.data as { text?: unknown } | undefined)?.text
-    if (data?.type === 'jamo-draft' && typeof text === 'string') await draftFromInput($, text)
-    if (data?.type === 'jamo-submit' && typeof text === 'string') await submitFromInput($, text)
     return next(e)
   })
 
@@ -225,7 +248,7 @@ export const register: Register = on => {
       </Box>
     )
 
-    if (view === 'jamo' && 'Client' in els) {
+    if (view === 'jamo' && 'Input' in els) {
       return (
         <Box flexDirection="column">
           {header}
@@ -236,9 +259,12 @@ export const register: Register = on => {
 
     if ((view === 'runner' || view === 'shooter') && 'Client' in els) {
       const input = await read($, inputA)
+      const keysField = await read($, keysFieldA)
       const props = { bonus, best: records.games[view].best, cols, input }
-      const key = (k: string) => () => run(update($, inputA, cur => ({ seq: cur.seq + 1, key: k })))
+      // 화면 버튼을 눌러도 포커스는 키 받는 칸으로 돌아간다
+      const key = (k: string) => () => run(update($, inputA, cur => ({ seq: cur.seq + 1, key: k })).then(() => focusKeys($)))
       const Client = els.Client
+      const Input = 'Input' in els ? els.Input : undefined
       return (
         <Box flexDirection="column">
           {header}
@@ -248,9 +274,21 @@ export const register: Register = on => {
             <Button key="big" label="큰 창으로" onPress={() => run(launch($, view))} />
           </Box>
           {view === 'runner' ? <Client key="runner" module="./runner.tsx" props={props} /> : <Client key="shooter" module="./shooter.tsx" props={props} />}
+          {Input !== undefined && (
+            <Input
+              key="keys"
+              autoFocus
+              label="키 "
+              placeholder={view === 'runner' ? '스페이스 점프 (한/영 끄고)' : 'a ← · d → · 스페이스 산탄 (한/영 끄고)'}
+              submitLabel="시작"
+              value={keysField}
+              onInput={v => run(keysTyped($, v))}
+              onSubmit={() => run(update($, inputA, cur => ({ seq: cur.seq + 1, key: ' ' })))}
+            />
+          )}
           <Box flexDirection="row" gap={1}>
             <Button key="key-a" hotkey="a" label="←" onPress={key('left')} />
-            <Button key="key-w" hotkey="w" autoFocus variant="primary" label={view === 'runner' ? '점프·내리찍기' : '시작·산탄'} onPress={key(' ')} />
+            <Button key="key-w" hotkey="w" variant="primary" label={view === 'runner' ? '점프·내리찍기' : '시작·산탄'} onPress={key(' ')} />
             <Button key="key-d" hotkey="d" label="→" onPress={key('right')} />
           </Box>
           {launched !== '' && <Text dimColor>{launched}</Text>}
