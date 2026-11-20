@@ -1,0 +1,6 @@
+__pycache__/
+.pytest_cache/
+*.log
+.claude-plugin/types/
+plugins/*/.claude-plugin/types/
+.DS_Store

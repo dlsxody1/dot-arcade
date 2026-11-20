@@ -1,0 +1,8 @@
+{
+  "name": "dot-arcade",
+  "description": "Claude Code 세션을 기다리는 동안 하는 도트 오락실 mod",
+  "owner": { "name": "dlsxody1" },
+  "plugins": [
+    { "name": "dot-arcade", "source": "./plugins/dot-arcade", "description": "세션 기다리며 하는 도트 오락실: 자모 다섯 칸, 한길 달리기, 버그 편대 격추" }
+  ]
+}
