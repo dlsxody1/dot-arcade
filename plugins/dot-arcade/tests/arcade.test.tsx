@@ -206,17 +206,22 @@ test('창: 게임 셋이 나오고, 고르면 창 안에서 그 게임이 돈다
   }
 })
 
-test('창: VS Code와 모바일에서는 자모가 돌고, 달리기는 열 곳을 알려 준다', async ($, on) => {
+test('창: 데스크톱, VS Code, 모바일은 자모 판을 그림으로 그리고, 달리기는 열 곳을 알려 준다', async ($, on) => {
   world(on)
-  for (const surface of ['vscode', 'mobile'] as const) {
+  for (const surface of ['vscode', 'mobile', 'desktop'] as const) {
     const ui = await $.ui.mount({ ...PANE, surface })
-    await ui.press({ key: 'open-runner' })
-    expect(await ui.find({ type: 'Text', text: /실시간 게임을 그릴 수 없어요/ })).toBeDefined()
-    await ui.press({ key: 'back' })
+    if (surface !== 'desktop') {
+      await ui.press({ key: 'open-runner' })
+      expect(await ui.find({ type: 'Text', text: /실시간 게임을 그릴 수 없어요/ })).toBeDefined()
+      await ui.press({ key: 'back' })
+    }
     await ui.press({ key: 'open-jamo' })
     // 모바일 앱은 Input을 받겠다고 한 앱에만 그려 주므로, 화면 자판은 어디서나 된다
     await ui.press({ key: 'k-ㅂ' })
-    expect(await ui.find({ type: 'Text', text: 'ㅂ' })).toBeDefined()
+    // 터미널이 아닌 곳은 판을 그림 한 장(어두운 바탕 포함)으로 그린다: 밝은 테마에서도 칸과 글자가 보인다
+    const board = (await ui.findAll({ type: 'Svg' }))[0]?.props as { source?: string } | undefined
+    expect(board?.source).toContain('>ㅂ</text>')
+    expect(board?.source).toContain('fill="#0d1030"')
     if (surface === 'vscode') expect(await ui.find({ key: 'typing' })).toBeDefined()
     await ui.press({ key: 'back' })
     await ui.unmount()

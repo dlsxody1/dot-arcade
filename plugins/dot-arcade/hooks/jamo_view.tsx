@@ -188,8 +188,29 @@ async function hint($: Dollar) {
 type Cell = { ch: string; fill?: string; border: string; bold?: boolean }
 
 export type Els = Pick<Elements['terminal'], 'Box' | 'Text' | 'Button' | 'Input'>
+export type SvgEl = Elements['desktop']['Svg']
 
-export async function JamoView($: Dollar, els: Els, run: (p: Promise<unknown>) => void, cols = 70) {
+/**
+ * 판 전체를 그림 한 장으로: 데스크톱 앱, VS Code, 모바일은 칸의 배경색을 그리지 않고 밝은 테마에서
+ * 흰 테두리가 안 보이므로, 어두운 바탕까지 그림에 넣어 어디서나 같게 보이게 한다.
+ */
+export function boardSvg(grid: Cell[][]): string {
+  const C = 44, G = 8, P = 10
+  const w = 5 * C + 4 * G + 2 * P
+  const h = grid.length * C + (grid.length - 1) * G + 2 * P
+  const cells = grid.flatMap((row, r) => row.map((c, i) => {
+    const x = P + i * (C + G), y = P + r * (C + G)
+    const ch = c.ch.trim()
+    return `<rect x="${x + 1}" y="${y + 1}" width="${C - 2}" height="${C - 2}" rx="8" fill="${c.fill ?? '#141838'}" stroke="${c.border}" stroke-width="${c.bold ? 3 : 1.5}"/>`
+      + (ch === '' ? '' : `<text x="${x + C / 2}" y="${y + C / 2}" text-anchor="middle" dominant-baseline="central" font-size="22" font-weight="700" fill="${c.border === '#83769c' && c.fill === undefined ? '#83769c' : '#ffffff'}" font-family="Malgun Gothic, Apple SD Gothic Neo, Noto Sans KR, sans-serif">${ch}</text>`)
+  })).join('')
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><rect width="${w}" height="${h}" rx="12" fill="#0d1030"/>${cells}</svg>`
+}
+
+/** 그림판의 칸 크기(px). */
+export const BOARD_PX = { w: 5 * 44 + 4 * 8 + 20, h: 6 * 44 + 5 * 8 + 20 }
+
+export async function JamoView($: Dollar, els: Els, run: (p: Promise<unknown>) => void, cols = 70, Svg?: SvgEl) {
   paneCols = cols
   const { Box, Text, Button, Input } = els
   // 버튼을 누른 뒤에는 포커스를 타자 칸으로 돌린다
@@ -231,12 +252,23 @@ export async function JamoView($: Dollar, els: Els, run: (p: Promise<unknown>) =
     const m = seen.get(ch)
     return m === undefined ? '#83769c' : MARK_BG[m]
   }
+  // 그림판을 쓰는 곳은 버튼 바탕색을 못 칠하니 글자색(테마 색)으로 판정을 보인다
+  const MARK_THEME: Record<Mark, 'success' | 'warning' | 'inactive'> = { hit: 'success', near: 'warning', miss: 'inactive' }
+  const keyRich = (ch: string) => {
+    const m = seen.get(ch)
+    return (
+      <Button key={`k-${ch}`} plain onPress={() => press(typeJamo($, ch))}>
+        <Text color={typing.has(ch) ? 'claude' : m === undefined ? undefined : MARK_THEME[m]} weight="bold" underline={typing.has(ch) || undefined}>{` ${ch} `}</Text>
+      </Button>
+    )
+  }
   // 지금 치고 있는 자모는 흰 바탕으로 바로 표시
-  const key = (ch: string) => (
+  const keyBlock = (ch: string) => (
     <Button key={`k-${ch}`} plain onPress={() => press(typeJamo($, ch))}>
       <Text backgroundColor={typing.has(ch) ? '#ffffff' : keyColor(ch)} color={typing.has(ch) ? '#0d1030' : '#ffffff'} weight="bold">{` ${ch} `}</Text>
     </Button>
   )
+  const key = Svg !== undefined ? keyRich : keyBlock
 
   return (
     <Box flexDirection="column" position="relative" width={cols}>
@@ -246,6 +278,12 @@ export async function JamoView($: Dollar, els: Els, run: (p: Promise<unknown>) =
         <Text dimColor>{g.mode === 'daily' ? `오늘의 낱말 · 연속 ${records.jamoStreak}일` : '연습'}</Text>
       </Box>
 
+      {Svg !== undefined ? (
+        <Box flexDirection="column" marginTop={1} alignItems="center">
+          <Svg source={boardSvg(grid)} alt={`자모 다섯 칸 판: ${g.rows.length}줄 입력함`} width={BOARD_PX.w} height={BOARD_PX.h} />
+          {g.words.length > 0 && <Text dimColor>{g.words.join(' · ')}</Text>}
+        </Box>
+      ) : (
       <Box flexDirection="column" marginTop={1} alignItems="center">
         {grid.map(cells => (
           <Box flexDirection="row" gap={1}>
@@ -258,6 +296,7 @@ export async function JamoView($: Dollar, els: Els, run: (p: Promise<unknown>) =
         ))}
         {g.words.length > 0 && <Text dimColor>{g.words.join(' · ')}</Text>}
       </Box>
+      )}
 
       {!g.isDone && (
         <Box flexDirection="column" marginTop={1} gap={1} alignItems="center">
@@ -284,7 +323,7 @@ export async function JamoView($: Dollar, els: Els, run: (p: Promise<unknown>) =
             onInput={v => run(onTyped($, v))}
             onSubmit={v => run(guess($, normalizeTyped(v)))}
           />
-          {msg !== '' && <Text color="#ffec27">{msg}</Text>}
+          {msg !== '' && <Text color={Svg !== undefined ? 'warning' : '#ffec27'}>{msg}</Text>}
           <Box flexDirection="column" alignItems="center">
             <Text dimColor>한/영을 끄고 두벌식 자리로 치면(a → ㅁ, k → ㅏ) 키마다 바로 칸에 찍혀요.</Text>
             <Text dimColor>Enter: 입력 · Backspace: 지우기 · Esc: 채팅으로 · 화면 자판을 눌러도 돼요.</Text>

@@ -277,7 +277,7 @@ export const register: Register = on => {
       return (
         <Box flexDirection="column">
           {header}
-          {await JamoView($, els, run, cols)}
+          {await JamoView($, els, run, cols, e.surface !== 'terminal' && 'Svg' in els ? els.Svg : undefined)}
         </Box>
       )
     }
