@@ -161,6 +161,7 @@ class Shooter:
             self.double = 0
             self.juice.feedback('large', self.x + 4, SHIP_Y + 3, [RED, ORANGE, YELLOW, WHITE], flash=True)
             self.juice.parts.burst(self.x + 4, SHIP_Y + 3, 20, [BLUE, WHITE], 90, 40, 0.9)
+            self.juice.anims.play('boom', self.x + 4, SHIP_Y + 8)
 
     def kill(self, e: dict) -> None:
         diving = e['mode'] in ('dive', 'back')
@@ -174,6 +175,7 @@ class Shooter:
         self.juice.feedback(tier, e['x'] + 4, e['y'] + 4, COLORS[e['kind']], label,
                             YELLOW if mult > 2 or diving else WHITE)
         self.juice.parts.burst(e['x'] + 4, e['y'] + 4, 8, COLORS[e['kind']], 70, 30, 0.5, size=2)
+        self.juice.anims.play('spark', e['x'] + 4, e['y'] + 4)
         if self.rnd.random() < 0.07 and not self.double:
             self.caps.append([e['x'], e['y']])
 
@@ -201,6 +203,7 @@ class Shooter:
             if self.double:
                 pygame.draw.circle(world, PAL[BLUE], (round(self.x + 4), SHIP_Y + 4), 7, 1)
         self.juice.parts.draw(world)
+        self.juice.anims.draw(world)
 
     def hud(self) -> None:
         a = self.app

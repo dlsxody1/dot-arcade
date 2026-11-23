@@ -132,6 +132,7 @@ class Jamo:
             for i in range(5):
                 self.juice.parts.burst(GX + i * PITCH + 6, GY + row * PITCH, 10, [LIME, YELLOW, PINK, BLUE],
                                        110, 180, 1.2, up=True, size=2)
+            self.juice.anims.play('confetti', GX + 37, GY + row * PITCH + 10)
             self.end(score)
         elif len(self.rows) >= 6:
             self.done = True
@@ -209,6 +210,7 @@ class Jamo:
         for i, color in enumerate([DGRAY, GREEN, 9]):
             pygame.draw.rect(world, PAL[color], (KX + i * 44, KY + 66, 40, 14))
         self.juice.parts.draw(world)
+        self.juice.anims.draw(world)
 
     def key_marks(self) -> dict[str, str]:
         best: dict[str, str] = {}

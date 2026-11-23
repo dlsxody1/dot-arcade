@@ -128,6 +128,7 @@ class Runner:
             self.juice.parts.burst(p.x + 3, p.y + PH, 6 if heavy else 3, [WHITE, PEACH], 40, 60, 0.35, up=True)
             if heavy:
                 self.juice.shake.add(0.2)
+                self.juice.anims.play('slam', p.x + 3, p.y + PH)
         elif ev.startswith('bump:'):
             tx, ty = map(int, ev[5:].split(','))
             kind = self.lv.tiles.get((tx, ty))
@@ -152,6 +153,7 @@ class Runner:
                 self.coins += 1
                 self.score += 10
                 self.juice.feedback('small', c[0], c[1], [YELLOW, WHITE], '+10', YELLOW)
+                self.juice.anims.play('collect', c[0], c[1] + 4)
             else:
                 keep.append(c)
         self.lv.coins = keep
@@ -191,6 +193,7 @@ class Runner:
         tier = 'large' if points >= 400 else 'medium'
         self.juice.feedback(tier, e['x'] + 4, e['y'] + 4, [RED, ORANGE, WHITE] if e['kind'] == 'beetle'
                             else [LIME, GREEN, WHITE], f'+{points}', WHITE if points < 400 else YELLOW)
+        self.juice.anims.play('poof', e['x'] + 4, e['y'] + 8)
 
     def hurt(self) -> None:
         if self.shield:
@@ -208,6 +211,7 @@ class Runner:
         if fell:
             self.p.y = H - 4
         self.juice.feedback('large', self.p.x + 3, min(self.p.y, H - 8), [RED, WHITE, BLUE], flash=True)
+        self.juice.anims.play('boom', self.p.x + 3, min(self.p.y + PH, H))
 
     def finish(self, state: str) -> None:
         self.state, self.timer = state, 0
@@ -248,6 +252,7 @@ class Runner:
                 world.blit(sprite('squashed'), (e['x'] - cam, e['y']))
         self.draw_player(world, cam)
         self.juice.parts.draw(world, cam)
+        self.juice.anims.draw(world, cam)
 
     def draw_player(self, world: pygame.Surface, cam: int) -> None:
         p = self.p

@@ -106,3 +106,23 @@ def test_double_jamo_split_into_basic_ones():
     assert split_jamo('ㅖ') == ['ㅕ', 'ㅣ'] and split_jamo('ㄱ') == ['ㄱ']
     assert compose(list('ㄱㄱㅏㅊㅣ')) == '까치'
     assert daily_answer(20776) == '이름' and daily_answer(20777) == '음표'  # mod판과 같다
+
+
+def test_baked_pixelfx_effects_play_once_and_use_only_pico8_colors():
+    from PIL import Image
+    from core import PAL
+    from fx import ASSETS, Anims
+    meta = Anims.meta()
+    assert set(meta) == {'spark', 'boom', 'poof', 'collect', 'slam', 'confetti'}
+    pico = set(PAL)
+    for name, e in meta.items():
+        im = Image.open(ASSETS / f'{name}.png').convert('RGBA')
+        assert im.size == (e['w'] * e['n'], e['h'])
+        assert {px[:3] for px in im.getdata() if px[3]} <= pico, name  # 팔레트 규칙
+    a = Anims()
+    a.play('spark', 10, 10)
+    a.play('없는효과', 0, 0)
+    assert len(a.items) == 1
+    for _ in range(60):
+        a.update()
+    assert a.items == []  # 0.5초짜리는 1초 안에 끝난다

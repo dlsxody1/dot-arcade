@@ -1,8 +1,10 @@
-"""연출(game-feel 스킬): 흔들림, 히트스톱, 늘었다 줄기, 파티클, 글자 팝, 화면 번쩍임."""
+"""연출(game-feel 스킬): 흔들림, 히트스톱, 늘었다 줄기, 파티클, 글자 팝, 화면 번쩍임, 구운 효과 애니메이션."""
 from __future__ import annotations
 
+import json
 import math
 import random
+from pathlib import Path
 
 from core import DT, PAL, WHITE
 
@@ -154,6 +156,53 @@ class Flash:
             self.frames -= 1
 
 
+ASSETS = Path(__file__).resolve().parent / 'assets' / 'pixelfx'
+
+
+class Anims:
+    """pixelfx(MIT)에서 구운 효과 띠를 한 번씩 재생한다. 이름은 assets/pixelfx/index.json."""
+
+    _meta: dict | None = None
+    _strips: dict = {}
+
+    def __init__(self) -> None:
+        self.items: list[list] = []  # 이름, x, y, 지난 시간
+
+    @classmethod
+    def meta(cls) -> dict:
+        if cls._meta is None:
+            try:
+                cls._meta = json.loads((ASSETS / 'index.json').read_text(encoding='utf-8'))['effects']
+            except (OSError, ValueError, KeyError):
+                cls._meta = {}
+        return cls._meta
+
+    def play(self, name: str, x: float, y: float) -> None:
+        """효과의 기준점(발밑이나 맞은 곳)을 x, y에 둔다. 없는 이름은 조용히 넘긴다."""
+        if name in self.meta():
+            self.items.append([name, x, y, 0.0])
+
+    def frame_of(self, item: list) -> int:
+        e = self.meta()[item[0]]
+        return int(item[3] * e['fps'])
+
+    def update(self) -> None:
+        for it in self.items:
+            it[3] += DT
+        self.items = [it for it in self.items if self.frame_of(it) < self.meta()[it[0]]['n']]
+
+    def draw(self, surf, cam_x: float = 0) -> None:
+        import pygame
+        for it in self.items:
+            e = self.meta()[it[0]]
+            strip = Anims._strips.get(it[0])
+            if strip is None:
+                strip = Anims._strips[it[0]] = pygame.image.load(str(ASSETS / f'{it[0]}.png'))
+            w = e['w']
+            area = pygame.Rect(self.frame_of(it) * w, 0, w, e['h'])
+            surf.blit(strip, (round(it[1] - e['px'] - cam_x), round(it[2] - e['py'])), area)
+
+
 class Juice:
     """한 곳에서 단계별 연출을 터뜨린다."""
 
@@ -163,6 +212,7 @@ class Juice:
         self.parts = Particles()
         self.pops = Popups()
         self.flash = Flash()
+        self.anims = Anims()
 
     def feedback(self, tier: str, x: float, y: float, colors: list[int], text: str | None = None,
                  text_color: int = WHITE, flash: bool = False) -> None:
@@ -179,5 +229,6 @@ class Juice:
 
     def tick_visual(self) -> None:
         self.parts.update()
+        self.anims.update()
         self.pops.update()
         self.flash.tick()

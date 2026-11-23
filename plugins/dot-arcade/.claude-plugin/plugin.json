@@ -1,6 +1,6 @@
 {
   "name": "dot-arcade",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "세션 기다리며 하는 도트 오락실: 자모 다섯 칸, 한길 달리기, 버그 편대 격추. 채팅 옆 창(터미널, 데스크톱)에서 바로 하고, 다른 세션이 끝나면 알림과 보너스.",
   "license": "MIT",
   "homepage": "https://github.com/dlsxody1/dot-arcade",

@@ -1,0 +1,60 @@
+{
+ "source": "https://github.com/patch-gg/pixelfx",
+ "commit": "5294518ce7c72e48b6100a744596e0acf57f2826",
+ "effects": {
+  "spark": {
+   "id": "impacts/hit-spark",
+   "w": 43,
+   "h": 24,
+   "n": 15,
+   "fps": 30.0,
+   "px": 5,
+   "py": 22
+  },
+  "boom": {
+   "id": "explosions/small-explosion",
+   "w": 76,
+   "h": 70,
+   "n": 14,
+   "fps": 15.0,
+   "px": 36,
+   "py": 57
+  },
+  "poof": {
+   "id": "spawn/poof",
+   "w": 40,
+   "h": 35,
+   "n": 14,
+   "fps": 15.0,
+   "px": 18,
+   "py": 30
+  },
+  "collect": {
+   "id": "pickups/collect-burst",
+   "w": 35,
+   "h": 38,
+   "n": 15,
+   "fps": 15.0,
+   "px": 16,
+   "py": 38
+  },
+  "slam": {
+   "id": "impacts/ground-slam",
+   "w": 67,
+   "h": 42,
+   "n": 12,
+   "fps": 15.0,
+   "px": 34,
+   "py": 34
+  },
+  "confetti": {
+   "id": "ui/confetti",
+   "w": 157,
+   "h": 83,
+   "n": 36,
+   "fps": 15.0,
+   "px": 76,
+   "py": 80
+  }
+ }
+}

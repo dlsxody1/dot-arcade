@@ -21,6 +21,7 @@
 
 - 논리 해상도 256 x 144, 정수 배율 4. 그림은 논리 해상도에 그리고 NEAREST로 키운다. 글자(HUD)는 키운 뒤 그린다.
 - 팔레트는 PICO-8 16색(`game/core.py`의 `PAL`). 새 색을 지어내지 않는다.
+- 구운 효과(`game/assets/pixelfx/`)는 `fx.Anims`로 재생한다(`juice.anims.play(이름, x, y)`). 효과를 더하거나 바꾸려면 `tools/bake_pixelfx.py`의 `EFFECTS`를 고치고 pixelfx 저장소를 받아 다시 굽는다.
 - 60fps 고정 틱. 소리는 쓰지 않고 연출(흔들림, 멈춤, 늘었다 줄기, 번쩍임, 파티클, 글자 팝)로 채운다.
 
 ## 코드

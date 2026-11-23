@@ -172,7 +172,7 @@ pip install pygame-ce
 - mod: TypeScript 훅 모듈 하나(`plugins/dot-arcade/hooks/register.tsx`)와 게임별 `Client` 모듈. 도트는 반칸 블록(`▀`) 한 칸에 픽셀 두 개.
 - 연출: 화면 흔들림(trauma²), 맞을 때 잠깐 멈춤, 늘었다 줄기, 파티클, 점수 팝, 번쩍임(초당 3회 이하).
 - 점프 수치와 연출은 저장소의 `.claude/skills/`(platformer, game-feel)를 따랐습니다. 출처와 바꾼 곳은 각 폴더의 `SOURCE.md`.
-- 그림, 캐릭터, 이름은 모두 새로 만든 것입니다.
+- 그림, 캐릭터, 이름은 모두 새로 만든 것입니다. 큰 창의 격추 불꽃, 폭발, 연기, 코인 반짝임, 내리찍기 충격, 색종이는 [pixelfx](https://github.com/patch-gg/pixelfx)(MIT) 효과를 PICO-8 색으로 다시 구운 것입니다. 출처는 `plugins/dot-arcade/game/assets/pixelfx/NOTICE.md`.
 
 ```bash
 claude plugin validate plugins/dot-arcade       # mod 검사
@@ -182,4 +182,4 @@ python -m pytest plugins/dot-arcade/game/tests  # 큰 창 규칙 테스트
 
 ## 라이선스
 
-MIT. `.claude/skills/` 아래 스킬은 각 폴더의 원본 라이선스(Apache-2.0, MIT)를 따릅니다.
+MIT. `.claude/skills/` 아래 스킬은 각 폴더의 원본 라이선스(Apache-2.0, MIT)를, `game/assets/pixelfx/`의 효과 그림은 pixelfx와 Sprite Fusion의 MIT 라이선스를 따릅니다.
