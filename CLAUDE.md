@@ -32,10 +32,10 @@
 
 - `~/.claude/dot-arcade/records.json`: 게임별 최고 점수, 날짜(`2026.11.19 (목) 14:02`), 판 수.
 - `~/.claude/dot-arcade/bonus.json`: 보너스 개수와 이미 준 세션 끝남 목록.
-- `~/.claude/dot-arcade/sessions/*.json`: 각 세션의 mod가 쓰는 작업 중/끝남.
+- `~/.claude/dot-arcade/sessions/*.json`: 각 세션의 mod가 쓰는 작업 중/끝남. Codex 세션은 `codex/codex_arcade.py`(Codex 훅이 부름)가 `codex-<세션>.json`으로 쓴다.
 
 ## 확인
 
 - mod: `claude plugin validate plugins/dot-arcade`, `claude plugin test plugins/dot-arcade`.
-- 큰 창 규칙: `python -m pytest plugins/dot-arcade/game/tests -q`.
+- 큰 창 규칙과 Codex 연결: `python -m pytest plugins/dot-arcade/game/tests plugins/dot-arcade/codex/tests -q`.
 - 큰 창 화면: `python plugins/dot-arcade/game/main.py --game runner --frames 600 --shot out.png` (입력 스크립트는 `--keys`).

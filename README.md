@@ -90,6 +90,25 @@ Claude Code 세션을 여러 개 돌려 두고 기다리는 그 시간,<br>
 | 👾 버그 편대 격추 | 목숨 +1 |
 | 🔤 자모 다섯 칸 | 한 칸 힌트 |
 
+## Codex에서도 (선택)
+
+Codex는 채팅 옆에 창을 붙이는 기능이 없어서 `/arcade` 창은 못 띄웁니다. 대신 **Codex 세션이 끝나면 오락실에 알림과 보너스가 오게** 할 수 있어요. 게임은 큰 창(pygame)이나 Claude Code의 `/arcade` 창에서 하면 됩니다.
+
+1. 내 PC에 맞는 훅 설정을 뽑습니다(경로가 채워져 나와요).
+
+   ```bash
+   python plugins/dot-arcade/codex/codex_arcade.py --print-hooks
+   ```
+
+   플러그인으로 설치했다면 `~/.claude/plugins/` 아래 `dot-arcade` 폴더의 `codex/codex_arcade.py`를 쓰세요.
+
+2. 나온 내용을 `~/.codex/hooks.json`(Windows는 `%USERPROFILE%\.codex\hooks.json`)에 넣습니다. 파일에 이미 다른 훅이 있으면 `hooks` 안에 항목만 합쳐 주세요.
+3. Codex에서 `/hooks`로 새 훅을 확인하고 믿음(trust)을 줍니다.
+
+그러면 Codex에서 프롬프트를 보내면 "작업 중", 답이 끝나면 "끝남"이 `~/.claude/dot-arcade/sessions/`에 적히고, 큰 창과 `/arcade` 창이 `Codex · 폴더 이름`으로 알려 줍니다. 필요한 것은 Python뿐이에요(표준 라이브러리만 씀).
+
+> 훅 대신 `~/.codex/config.toml`의 `notify = ["python", ".../codex_arcade.py"]`로도 됩니다. 이 방법은 끝남만 알리고 작업 중은 안 보여요.
+
 ## 설치
 
 Claude Code 터미널에서:
